@@ -1,3 +1,4 @@
 [submodule "metacad"]
 	path = metacad
 	url = https://github.com/1140lex/metacad.git
+	branch = developer
