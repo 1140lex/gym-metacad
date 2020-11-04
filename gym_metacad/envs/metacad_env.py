@@ -4,6 +4,13 @@ from gym import error, spaces, utils
 from gym.utils import seeding
 
 
+class MetaStateChange:
+  def __init__(self):
+    self.type
+    self.data
+    self.label
+
+
 # Entrypoint into metacad occurs here
 
 

@@ -8,6 +8,6 @@ RUN \
  pip install cython numpy && \
  pip install gym universe
 WORKDIR /app/metacad
-RUN npm install
+RUN rm -r node_modules package-lock.json && npm install
 ENTRYPOINT ["npm", "run", "dev"]
-EXPOSE 3000/TCP 5558/TCP
+EXPOSE 3000/TCP 3001/TCP 5558/TCP
