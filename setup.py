@@ -5,5 +5,5 @@ setup(name='gym_metacad',
 	author="Jasper Yao"
 	author_email="jasper.yao.iso@gmail.com"
 	description='OpenAI gym (and universe) integration into MetaCAD'
-	install_requires=['numpy','gym', 'universe', 'pyzmq', 'python-socketio']
+	install_requires=['numpy','gym', 'pyppeteer', 'pyzmq', 'python-socketio']
 )
