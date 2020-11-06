@@ -1,12 +1,10 @@
 import socketio
-import asyncio
-from aiohttp import web
+import uvicorn
 # Server instantiation
 sio = socketio.AsyncServer(async_mode = 'asgi', cors_allowed_origins='http://localhost:3000')
 
 # Generic Python ASGI
-app = web.Application()
-sio.attach(app)
+app = socketio.ASGIApp(sio)
 
 @sio.event
 async def connect(sid, environ):
@@ -21,4 +19,4 @@ async def disconnect(sid):
     print('disconnect ', sid)
 
 if __name__ == '__main__':
-    web.run_app(app, host='0.0.0.0', port=3001)
+    uvicorn.run(app, host='0.0.0.0', port=3001)

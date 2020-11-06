@@ -6,10 +6,12 @@ import zmq
 import socketio
 
 from pyppeteer import launch
-import asyncio
-import time
+import asyncio, uvicorn
+import socketio, pyppeteer
+import time, os, subprocess, multiprocessing, signal
 
-
+import logging
+logger = logging.getLogger(__name__)
 
 
 class MetaStateChange:
@@ -31,11 +33,13 @@ class MetaCADEnv(gym.Env):
 
   def __init__(self):
     # Start the node server
-
+    self.node = subprocess.Popen(['node', 'run', 'dev'], cwd='/app/metacad')
     # Start pyppeteer
-    
+
+
     # Start listening for Socketio connection 
-    
+    sio = socketio.AsyncServer(async_mode = 'asgi', cors_allowed_origins='http://localhost:3000')
+    self.app = socketio.ASGIApp(sio)
     # Fail if not good 
     # ???
 
@@ -46,4 +50,5 @@ class MetaCADEnv(gym.Env):
   def render(self, mode='human'):
     ...
   def close(self):
+    self.node.terminate()
     ...
