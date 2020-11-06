@@ -2,7 +2,6 @@ import socketio
 import eventlet
 # Server instantiation
 sio = socketio.Server(cors_allowed_origins='http://localhost:3000')
-
 # Generic Python WSGI
 app = socketio.WSGIApp(sio)
 
@@ -18,6 +17,9 @@ def message(sid, data):
 @sio.event
 def disconnect(sid):
     print('disconnect ', sid)
+
+async def main():
+
 
 if __name__ == '__main__':
     eventlet.wsgi.server(eventlet.listen(('', 3001)), app)

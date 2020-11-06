@@ -1,7 +1,15 @@
 import gym
-import zmq
 from gym import error, spaces, utils
 from gym.utils import seeding
+
+import zmq
+import socketio
+
+from pyppeteer import launch
+import asyncio
+import time
+
+
 
 
 class MetaStateChange:
@@ -15,13 +23,19 @@ class MetaStateChange:
 
 
 
-class MetaCADenv(gym.Env):
-  metadata = {'render.modes': ['human']}
+class MetaCADEnv(gym.Env):
+  metadata = {
+    'render.modes': ['human', "rgb_array", "state_pixels"],
+    'video.frames_per_second': FPS,
+    }
 
   def __init__(self):
     # Start the node server
-    # Start the zmq messenger
-    # Wait for the zmq to connect 
+
+    # Start pyppeteer
+    
+    # Start listening for Socketio connection 
+    
     # Fail if not good 
     # ???
 
