@@ -3,8 +3,15 @@ from pyppeteer import launch
 import asyncio
 import time
 
+async def drag(page, x: int, y: int):
+        mouse = page.mouse
+        await mouse.move
+        await mouse.down()
+        await mouse.move(x, y)
+        await mouse.up()
+
 async def main():
-	browser = await launch( args=['--no-sandbox', '--window-size=1920,1080', '--start-maximized'])
+	browser = await launch( args=['--no-sandbox', '--window-size=1920,1080', '--start-maximized'], defaultViewport=None)
 	page = await browser.newPage()
 	await page.goto('http://localhost:3000')
     # Wait till model to load here

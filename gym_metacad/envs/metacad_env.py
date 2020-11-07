@@ -8,10 +8,14 @@ import socketio
 from pyppeteer import launch
 import asyncio, uvicorn
 import socketio, pyppeteer
-import time, os, subprocess, multiprocessing, signal
+import time, os, subprocess, signal
+import multiprocessing
+from multiprocessing import process
 
 import logging
 logger = logging.getLogger(__name__)
+
+def browser():
 
 
 class MetaStateChange:
@@ -35,7 +39,8 @@ class MetaCADEnv(gym.Env):
     # Start the node server
     self.node = subprocess.Popen(['node', 'run', 'dev'], cwd='/app/metacad')
     # Start pyppeteer
-
+    self.pool = multiprocessing.pool()
+    self.browser = launch( args=['--no-sandbox', '--window-size=1920,1080', '--start-maximized'], defaultViewport=None)
 
     # Start listening for Socketio connection 
     sio = socketio.AsyncServer(async_mode = 'asgi', cors_allowed_origins='http://localhost:3000')
@@ -51,4 +56,5 @@ class MetaCADEnv(gym.Env):
     ...
   def close(self):
     self.node.terminate()
+    self.browser.close()
     ...
