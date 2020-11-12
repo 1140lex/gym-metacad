@@ -12,6 +12,10 @@ import time, os, subprocess, signal
 import multiprocessing
 from multiprocessing import Process, Pipe
 
+
+from datetime import datetime
+
+
 import logging
 logger = logging.getLogger(__name__)
 
@@ -30,10 +34,16 @@ class MetaCADEnv(gym.Env):
     'video.frames_per_second': FPS,
     }
 
-  def events(app, sender):
+  def timestamp(): -> str
+    # current date and time
+    now = datetime.now()
+    return datetime.fromtimestamp(datetime.timestamp(now))
+
+  def events(self, app, sender):
     # Make this "internal" only?
     @sio.event
     async def connect(sid, environ):
+        sender.send(sid)
         print('connect ', sid)
 
     @sio.event
@@ -48,7 +58,7 @@ class MetaCADEnv(gym.Env):
     uvicorn.run(app, host='0.0.0.0', port=3001)
 
   
-  async def drag(page, x: int, y: int):
+  async def drag(self, page, x: int, y: int):
     mouse = page.mouse
     await mouse.move
     await mouse.down()
@@ -72,10 +82,10 @@ class MetaCADEnv(gym.Env):
     app = socketio.ASGIApp(sio)
     receiver, sender = Pipe(duplex=False)
     self.receiver = receiver
-    self.socketio = Process(target=events, args=(app, sender,))
+    self.socketio = Process(target=self.events, args=(app, sender,))
     self.socketio.start()
     # Start pyppeteer
-    self.browser = browser('http://localhost:3000')
+    self.browser = asyncio.run(browser('http://localhost:3000'))
 
     # Fail if not good 
     # ???
@@ -87,7 +97,9 @@ class MetaCADEnv(gym.Env):
   def render(self, mode='human'):
     ...
   def close(self):
+    # Stop Pyppeteer 
     self.browser.close()
     self.socketio.terminate()
     # Wait for Process to terminate
     self.socketio.join()
+
