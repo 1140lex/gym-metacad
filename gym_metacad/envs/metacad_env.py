@@ -2,7 +2,6 @@ import gym
 import asyncio, uvicorn
 import socketio, pyppeteer
 import time, os, subprocess, signal
-import multiprocessing
 from multiprocessing import Process, Pipe
 from functools import partial
 from gym.utils import seeding
@@ -10,6 +9,7 @@ from pyppeteer import launch
 from datetime import datetime
 from gym import error, spaces, utils
 
+import socket # Included to test connectivity on node service in lieu of IPC
 import logging
 logger = logging.getLogger(__name__)
 
@@ -30,12 +30,12 @@ class MetaCADEnv(gym.Env):
         sender.send(sid)
         print('connect ', sid)
 
-    @sio.event
+    @self.sio.event
     async def message(sid, data):
         sender.send(data)
         print('message ', data)
 
-    @sio.event
+    @self.sio.event
     async def disconnect(sid):
         print('disconnect ', sid)
 
@@ -69,10 +69,10 @@ class MetaCADEnv(gym.Env):
   # TODO gym.Env format demands passing args 
   def __init__(self, path = 'path'):
     # Start the node server
-    self.node = subprocess.Popen(['node', 'run', 'dev'], cwd='/app/metacad')
+    self.node = subprocess.Popen(['node', 'run', 'dev'], stdout=subprocess.DEVNULL ,cwd='/app/metacad')
     # Start listening for Socketio connection 
     # Going to need to handle multiple ports here somehow.  
-    sio = socketio.AsyncServer(async_mode = 'asgi', cors_allowed_origins='http://localhost:3000')
+    self.sio = socketio.AsyncServer(async_mode = 'asgi', cors_allowed_origins='http://localhost:3000')
     # Generic Python ASGI
     app = socketio.ASGIApp(sio)
     receiver, sender = Pipe(duplex=False)
@@ -80,6 +80,18 @@ class MetaCADEnv(gym.Env):
     self.socketio = Process(target=self.events, args=(app, sender,))
     self.socketio.start()
     # Start pyppeteer
+    ### Before we do this, make sure that the local host is listening (via lsof/psutil) on 3000
+    test_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    i = 1
+    while not bool(test_socket.connect.ex('0.0.0.0', 3000):
+      print("Waiting for socket at 3000 to open X" + i)
+      try:
+        time.sleep(1)
+      except KeyboardInterrupt:
+        node.terminate()
+        sys.exit()
+
+    #node_server = bool(test_socket.connect.ex('0.0.0.0', 3000)
     self.browser = asyncio.run(self._browser('http://localhost:3000'))
     self.sid = receiver.recv()
     # Set the path for screenshots
@@ -113,6 +125,7 @@ class MetaCADEnv(gym.Env):
     return (observation, reward, done, info)
   
   def reset(self):
+    # Add better reset to make sure all processes are killed.
     pass
 
   def render(self, mode='human'):
