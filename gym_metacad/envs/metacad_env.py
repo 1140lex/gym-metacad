@@ -20,8 +20,7 @@ class MetaCADEnv(gym.Env):
 
   def label_timestamp(self) -> str:
     # label snapshots with appropriate identifier + 
-    now = datetime.now()
-    return self.sid + '-' + datetime.fromtimestamp(datetime.timestamp(now))
+    return self.sid + '-' + str(datetime.now())
 
   def events(self, app, sender):
     # Make this "internal" only?
@@ -41,13 +40,13 @@ class MetaCADEnv(gym.Env):
 
     uvicorn.run(app, host='0.0.0.0', port=3001)
 
-  async def click(self, page):
-    mouse = page.mouse
+  async def click(self):
+    mouse = self.page.mouse
     await mouse.down()
     await mouse.up()
   
-  async def drag(self, page, x: int, y: int):
-    mouse = page.mouse
+  async def drag(self, x: int, y: int):
+    mouse = self.page.mouse
     await mouse.move
     await mouse.down()
     await mouse.move(x, y)
@@ -60,23 +59,22 @@ class MetaCADEnv(gym.Env):
     # Wait till model to load here 
     return page
   
-  async def screenshot(self, page):
+  async def screenshot(self):
     '''Warning: This is not a real time feature, only use to establish sequential order per session id'''
-    stamp = label_timestamp()
-    await page.screenshot({self.path: stamp + '.png'})
+    stamp = self.label_timestamp()
+    await self.page.screenshot({self.path: stamp + '.png'})
     return stamp
 
   # TODO gym.Env format demands passing args 
   def __init__(self, path = 'path'):
     # Start the node server
-    self.node = subprocess.Popen(['exec','npm', 'run', 'dev'], stdout=subprocess.DEVNULL ,cwd='/app/metacad', shell=True)
-    # IPC send CTRL^C 
+    self.node = subprocess.Popen(['npm run dev'], stdout=subprocess.DEVNULL ,cwd='/app/metacad', shell=True, preexec_fn=os.setsid)
     # Start listening for Socketio connection 
     # Going to need to handle multiple ports here somehow.  
     self.sio = socketio.AsyncServer(async_mode = 'asgi', cors_allowed_origins='http://localhost:3000')
+    receiver, sender = Pipe(duplex=False)
     # Generic Python ASGI
     app = socketio.ASGIApp(self.sio)
-    receiver, sender = Pipe(duplex=False)
     self.receiver = receiver
     self.socketio = Process(target=self.events, args=(app, sender,))
     self.socketio.start()
@@ -85,9 +83,10 @@ class MetaCADEnv(gym.Env):
     test_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     i = 1
     test_location = ('0.0.0.0', 3000)
-    while not bool(test_socket.connect_ex(test_location)) :
-      print("Waiting for socket at 3000 to open X" + i)
+    while bool(test_socket.connect_ex(test_location)) :
+      print("Waiting for socket at 3000 to open X" + str(i))
       try:
+        i += 1
         time.sleep(1)
       except KeyboardInterrupt:
         node.terminate()
@@ -95,14 +94,13 @@ class MetaCADEnv(gym.Env):
     
     test_socket.close()
     #node_server = bool(test_socket.connect.ex('0.0.0.0', 3000)
-    self.browser = asyncio.run(self._browser('http://localhost:3000'))
+    self.page = asyncio.run(self._browser('http://localhost:3000'))
     self.sid = receiver.recv()
     # Set the path for screenshots
     self.path = path
     # Wait for web environment to load
     time.sleep(2)
-    self.start = asyncio.run(self.screenshot(self.page))
-    self.state
+    #self.start = asyncio.run(self.screenshot())
     # For plugin assesment at a later time
     self.rewarder = None
   
@@ -113,7 +111,7 @@ class MetaCADEnv(gym.Env):
       asyncio.run(action())
     else:
       action()
-    observation = asyncio.run(screenshot(self.page))
+    #observation = asyncio.run(self.screenshot())
     reward = 0.0 #Todo downstream
     done = False #Todo downstream
 
@@ -141,4 +139,5 @@ class MetaCADEnv(gym.Env):
     # Wait for Process to terminate
     self.socketio.join()
     # Stop nodejs
+    os.killpg(os.getpgid(l.pid), signal.SIGTERM)
     self.node.terminate()
