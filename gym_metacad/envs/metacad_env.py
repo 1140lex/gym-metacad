@@ -69,12 +69,13 @@ class MetaCADEnv(gym.Env):
   # TODO gym.Env format demands passing args 
   def __init__(self, path = 'path'):
     # Start the node server
-    self.node = subprocess.Popen(['node', 'run', 'dev'], stdout=subprocess.DEVNULL ,cwd='/app/metacad')
+    self.node = subprocess.Popen(['exec','npm', 'run', 'dev'], stdout=subprocess.DEVNULL ,cwd='/app/metacad', shell=True)
+    # IPC send CTRL^C 
     # Start listening for Socketio connection 
     # Going to need to handle multiple ports here somehow.  
     self.sio = socketio.AsyncServer(async_mode = 'asgi', cors_allowed_origins='http://localhost:3000')
     # Generic Python ASGI
-    app = socketio.ASGIApp(sio)
+    app = socketio.ASGIApp(self.sio)
     receiver, sender = Pipe(duplex=False)
     self.receiver = receiver
     self.socketio = Process(target=self.events, args=(app, sender,))
@@ -83,14 +84,16 @@ class MetaCADEnv(gym.Env):
     ### Before we do this, make sure that the local host is listening (via lsof/psutil) on 3000
     test_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     i = 1
-    while not bool(test_socket.connect.ex('0.0.0.0', 3000):
+    test_location = ('0.0.0.0', 3000)
+    while not bool(test_socket.connect_ex(test_location)) :
       print("Waiting for socket at 3000 to open X" + i)
       try:
         time.sleep(1)
       except KeyboardInterrupt:
         node.terminate()
         sys.exit()
-
+    
+    test_socket.close()
     #node_server = bool(test_socket.connect.ex('0.0.0.0', 3000)
     self.browser = asyncio.run(self._browser('http://localhost:3000'))
     self.sid = receiver.recv()
@@ -138,4 +141,4 @@ class MetaCADEnv(gym.Env):
     # Wait for Process to terminate
     self.socketio.join()
     # Stop nodejs
-    self.node
+    self.node.terminate()
