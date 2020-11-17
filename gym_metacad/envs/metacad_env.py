@@ -1,4 +1,5 @@
 import gym
+import sys
 import asyncio
 import uvicorn
 import socketio
@@ -46,45 +47,57 @@ class MetaCADEnv(gym.Env):
 
         uvicorn.run(app, host='0.0.0.0', port=3001)
 
-    async def _browser(self, url: str):
-        browser = await launch(args=['--no-sandbox', '--window-size=1920,1080', '--start-maximized'], defaultViewport=None)
-        page = await browser.newPage()
-        await page.goto(url)
-        # Wait till model to load here
-        return page
-
-    async def screenshot(self):
-        '''Warning: This is not a real time feature, only use to establish sequential order per session id'''
-        stamp = self.label_timestamp()
-        await self.page.screenshot({self.path: stamp + '.png'})
-        return stamp
-
     def browser_main(self, browser_out, url: str,):
+        async def _screenshot():
+            '''Warning: This is not a real time feature, only use to establish sequential order per session id'''
+            stamp = self.label_timestamp()
+            await self.page.screenshot({self.path: stamp + '.png'})
+            browser_out.send()
 
-        async def click(self):
+        async def _browser(url: str):
+            browser = await launch(args=['--no-sandbox', '--window-size=1920,1080', '--start-maximized'], defaultViewport=None)
+            page = await browser.newPage()
+            await page.goto(url)
+            # Wait till model to load here
+            return page
+
+        async def _click():
             mouse = self.page.mouse
             await mouse.down()
             await mouse.up()
 
-        async def drag(self, x: int, y: int):
+        async def _drag(coordinates):
+            (x, y) = coordinates
             mouse = self.page.mouse
             await mouse.move
             await mouse.down()
             await mouse.move(x, y)
             await mouse.up()
 
-        loop = asyncio.get_event_loop()
-
-        async def event_loop(loop):
-            self.page = await self._browser(url)
+        async def event_loop(self, url):
+            self.page = await _browser(url=url)
 
             while True:
                 if browser_out.poll(timeout=None):
                     command = browser_out.recv()
+                    if command[0] == 1:
+                        await _screenshot()
+                    elif command[0] == 2:
+                        await _click()
+                    elif command[0] == 3:
+                        await _drag(command[1])
 
-            while browser
+        asyncio.run(event_loop(self=self, url=url))
 
-        loop.run_forever()
+    def screenshot(self):
+        self.browser_command.send((1, 0))
+        return self.browser_out.recv()
+
+    def click(self):
+        self.browser_command.send((2, 0))
+
+    def drag(self, x: int, y: int):
+        self.browser_command.send((3, (x, y)))
     # TODO gym.Env format demands passing args
 
     def __init__(self, path='path'):
@@ -112,24 +125,22 @@ class MetaCADEnv(gym.Env):
                 i += 1
                 time.sleep(1)
             except KeyboardInterrupt:
-                node.terminate()
+                self.node.terminate()
                 sys.exit()
 
         test_socket.close()
 
-        browser_out, browser_command = Pipe(duplex: False)
+        self.browser_out, self.browser_command = Pipe()
         self.browser = Process(target=self.browser_main, args=(
-            browser_out, 'http://localhost:3000'),)
+            self.browser_out, 'http://localhost:3000'),)
         self.browser.start()
 
-        self.page = asyncio.run(self._browser('http://localhost:3000'))
         self.sid = receiver.recv()
         # Set the path for screenshots
         self.path = path
         # Wait for web environment to load
         time.sleep(2)
-        browser_command.send()
-        self.start = asyncio.run(self.screenshot())
+        self.start = self.screenshot()
         # For plugin assesment at a later time
         self.rewarder = None
 
@@ -137,7 +148,7 @@ class MetaCADEnv(gym.Env):
         '''Sample call step(partial(action, args1, args2))'''
         # Take some action
 
-        #observation = asyncio.run(self.screenshot())
+        observation = self.screenshot()
         reward = 0.0  # Todo downstream
         done = False  # Todo downstream
 
@@ -160,7 +171,8 @@ class MetaCADEnv(gym.Env):
 
     def close(self):
         # Stop Pyppeteer
-        self.page.close()
+        self.browser.close()
+        self.browser.join()
         self.socketio.terminate()
         # Wait for Process to terminate
         self.socketio.join()
