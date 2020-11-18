@@ -9,7 +9,6 @@ import os
 import subprocess
 from signal import SIGTERM
 from multiprocessing import Process, Pipe
-from functools import partial
 from gym.utils import seeding
 from gym import error, spaces, utils
 from pyppeteer import launch
@@ -98,13 +97,13 @@ class MetaCADEnv(gym.Env):
         return self.browser_command.recv()
 
     def click(self):
-        self.browser_command.send((2, 0))
+        self.step((2, 0))
 
     def drag(self, x: int, y: int):
-        self.browser_command.send((3, (x, y)))
+        self.step((3, (x, y)))
 
     def _close(self):
-        self.browser_command.send((4, 0))
+        self.step((4, 0))
 
     # TODO gym.Env format demands passing args
 
@@ -153,9 +152,10 @@ class MetaCADEnv(gym.Env):
         self.rewarder = None
 
     def step(self, action, timeout=1):
-        '''Sample call step(partial(action, args1, args2))'''
-        # Take some action
 
+        # Take some action
+        self.browser_command.send(action)
+        # Locking could be an issue for below
         observation = self.screenshot()
         reward = 0.0  # Todo downstream
         done = False  # Todo downstream
