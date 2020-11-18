@@ -1,5 +1,17 @@
 # Metacad Gym Environment
-* This is a developmental stub
+Usage:
+1. Build Docker Container
+```
+/gym-metacad# Docker build -f gym_server.dockerfile -t <build_name> .
+```
+2. Connect to docker container
+3. To use in Python (Tested on 3.9)
+```
+import gym
+env = gym.make('gym_metacad:metacad-v0')
+```
+
+[OpenAI Gym Documentation](https://gym.openai.com/)
 
 ### Web Client Implementation:
 
