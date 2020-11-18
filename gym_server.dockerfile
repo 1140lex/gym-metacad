@@ -16,3 +16,5 @@ RUN \
 WORKDIR /app/metacad
 RUN rm -r node_modules package-lock.json && npm install 
 EXPOSE 3000/TCP 3001/TCP
+WORKDIR /app
+RUN pip install -e .

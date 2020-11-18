@@ -7,13 +7,13 @@ import pyppeteer
 import time
 import os
 import subprocess
-import signal
+from signal import SIGTERM
 from multiprocessing import Process, Pipe
 from functools import partial
 from gym.utils import seeding
+from gym import error, spaces, utils
 from pyppeteer import launch
 from datetime import datetime
-from gym import error, spaces, utils
 
 import socket  # Included to test connectivity on node service in lieu of IPC
 import logging
@@ -55,11 +55,12 @@ class MetaCADEnv(gym.Env):
             browser_out.send()
 
         async def _browser(url: str):
-            browser = await launch(args=['--no-sandbox', '--window-size=1920,1080', '--start-maximized'], defaultViewport=None)
+            browser = await launch(args=['--no-sandbox', '--window-size=1920,1080', '--start-maximized'],
+                                   defaultViewport=None, stdout=subprocess.DEVNULL)
             page = await browser.newPage()
             await page.goto(url)
             # Wait till model to load here
-            return page
+            return page, browser
 
         async def _click():
             mouse = self.page.mouse
@@ -75,7 +76,7 @@ class MetaCADEnv(gym.Env):
             await mouse.up()
 
         async def event_loop(self, url):
-            self.page = await _browser(url=url)
+            self.page, chrome = await _browser(url=url)
 
             while True:
                 if browser_out.poll(timeout=None):
@@ -86,18 +87,25 @@ class MetaCADEnv(gym.Env):
                         await _click()
                     elif command[0] == 3:
                         await _drag(command[1])
+                    elif command[0] == 4:
+                        await self.page.close()
+                        await chrome.close()
 
         asyncio.run(event_loop(self=self, url=url))
 
     def screenshot(self):
         self.browser_command.send((1, 0))
-        return self.browser_out.recv()
+        return self.browser_command.recv()
 
     def click(self):
         self.browser_command.send((2, 0))
 
     def drag(self, x: int, y: int):
         self.browser_command.send((3, (x, y)))
+
+    def _close(self):
+        self.browser_command.send((4, 0))
+
     # TODO gym.Env format demands passing args
 
     def __init__(self, path='path'):
@@ -164,18 +172,19 @@ class MetaCADEnv(gym.Env):
 
     def reset(self):
         # Add better reset to make sure all processes are killed.
-        pass
+        ...
 
     def render(self, mode='human'):
-        pass
+        ...
 
     def close(self):
         # Stop Pyppeteer
+        self._close()
         self.browser.close()
         self.browser.join()
         self.socketio.terminate()
         # Wait for Process to terminate
         self.socketio.join()
         # Stop nodejs
-        os.killpg(os.getpgid(l.pid), signal.SIGTERM)
+        os.killpg(os.getpgid(self.node.pid), SIGTERM)
         self.node.terminate()
