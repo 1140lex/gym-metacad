@@ -23,6 +23,7 @@ Connection tracks to window.location.hostname (from the browser's perspective on
 
 * SocketIO (Python) <- Socket.io <- React Client
 
+![Screenshot](fig1.png)
 
 ## Forwards Direction
 * Gym <-> Pyppeteer <-> Chrome Headless <- React
