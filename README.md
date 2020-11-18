@@ -17,6 +17,12 @@ Connection tracks to window.location.hostname (from the browser's perspective on
 [Pyppeteer](https://pypi.org/project/pyppeteer/)
 The initial idea of using OpenAI's Universe technology was scrapped with the realization that the overall complexity was far higher than anticipated. 
 [Pyppeteer](https://miyakogi.github.io/pyppeteer/reference.html) was found as an appropriate substitute, based on the Nodejs API for Chrome [Puppeteer](https://developers.google.com/web/tools/puppeteer) , browser task automation was achieved.
+![Screenshot](fig2.png)
+
+## Putting it all together
+
+![Screenshot](fig3.png)
+
 
 ## Further Development
 We chose to convert Eventlet based programming into asyncio/uvicorn code to reduce dependency count and because of both of their presence in sample code. 
