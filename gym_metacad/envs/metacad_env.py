@@ -32,7 +32,7 @@ class MetaCADEnv(gym.Env):
         # Make this "internal" only?
         @self.sio.event
         async def connect(sid, environ):
-            sender.send(sid)
+            sender.send(sid) # sid needs to go to all processes
             print('connect ', sid)
 
         @self.sio.event
@@ -76,7 +76,7 @@ class MetaCADEnv(gym.Env):
 
         async def event_loop(self, url):
             self.page, chrome = await _browser(url=url)
-
+            self.sid = self.browser_out.recv()
             while True:
                 if browser_out.poll(timeout=None):
                     command = browser_out.recv()
@@ -137,12 +137,14 @@ class MetaCADEnv(gym.Env):
 
         test_socket.close()
 
+        self.sid = None # = receiver.recv()
         self.browser_out, self.browser_command = Pipe()
         self.browser = Process(target=self.browser_main, args=(
             self.browser_out, 'http://localhost:3000'),)
         self.browser.start()
-
         self.sid = receiver.recv()
+        self.browser_out.send(self.sid) # Pass sid to timestamper!
+
         # Set the path for screenshots
         self.path = path
         # Wait for web environment to load
