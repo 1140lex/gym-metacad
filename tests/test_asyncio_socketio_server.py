@@ -3,10 +3,12 @@ import uvicorn
 import json
 from multiprocessing import Process, Pipe
 # Server instantiation
-sio = socketio.AsyncServer(async_mode = 'asgi', cors_allowed_origins='http://localhost:3000')
+sio = socketio.AsyncServer(
+    async_mode='asgi', cors_allowed_origins='http://localhost:3000')
 
 # Generic Python ASGI
 app = socketio.ASGIApp(sio)
+
 
 def events(app, sender):
     @sio.event
@@ -32,5 +34,5 @@ if __name__ == '__main__':
     print("hello moto")
     while(True):
         print(receiver.recv())
-        
+
     print("Timed Out")

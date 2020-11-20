@@ -35,7 +35,7 @@ class MetaCADEnv(gym.Env):
             sender.send(sid) # sid needs to go to all processes
             print('connect ', sid)
 
-        @self.sio.event
+        @self.sio.event #TODO screenshot on submit event
         async def message(sid, data):
             sender.send(data)
             print('message ', data)
@@ -51,7 +51,7 @@ class MetaCADEnv(gym.Env):
             '''Warning: This is not a real time feature, only use to establish sequential order per session id'''
             stamp = self.label_timestamp()
             await self.page.screenshot({self.path: stamp + '.png'})
-            browser_out.send()
+            browser_out.send(stamp)
 
         async def _browser(url: str):
             browser = await launch(args=['--no-sandbox', '--window-size=1920,1080', '--start-maximized'],
