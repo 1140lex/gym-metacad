@@ -107,7 +107,9 @@ class MetaCADEnv(gym.Env):
 
     # TODO gym.Env format demands passing args
 
-    def __init__(self, path='path'):
+    def __init__(self, path='/app/clips'):
+        # Set the path for screenshots
+        self.path = path
         # Start the node server
         self.node = subprocess.Popen(
             ['npm run dev'], stdout=subprocess.DEVNULL, cwd='/app/metacad', shell=True, preexec_fn=os.setsid)
@@ -145,8 +147,6 @@ class MetaCADEnv(gym.Env):
         self.sid = receiver.recv()
         self.browser_out.send(self.sid) # Pass sid to timestamper!
 
-        # Set the path for screenshots
-        self.path = path
         # Wait for web environment to load
         time.sleep(2)
         self.start = self.screenshot()
